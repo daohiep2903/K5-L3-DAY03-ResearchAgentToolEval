@@ -32,8 +32,8 @@ Sao chép mục dưới đây cho từng thành viên.
 
 ### Phần việc phụ trách
 
-- Chỉ phụ trách CP2: tối ưu prompt và tool declaration v1–v3.
-- Không phụ trách CP1, CP3, CP4 hoặc CP5; các phần này không tính vào đóng góp cá nhân của Đào Văn Hiệp.
+- Phụ trách CP2 tối ưu prompt và tool declaration v1–v3.
+- Không phụ trách CP1, CP3, CP4 hoặc CP5; 
 
 ### Đóng góp cụ thể
 
