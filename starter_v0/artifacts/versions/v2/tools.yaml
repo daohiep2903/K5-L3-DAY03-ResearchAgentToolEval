@@ -1,0 +1,251 @@
+# CP2: tool routing descriptions; parameter conventions refined in v3.
+tools:
+- name: clarify
+  description: Ask the user and wait when a required handle, URL, topic or content
+    is missing, or approval is needed. For a publishing request ask for approval before
+    send, using a yes/no question that also requests missing content when necessary.
+    Do not use if the conversation already supplies the information.
+  parameters:
+    type: object
+    properties:
+      question:
+        type: string
+        default: ''
+        description: Câu hỏi
+      response_type:
+        type: string
+        enum:
+        - text
+        - yes_no
+        - choice
+        default: text
+        description: Kiểu trả lời
+      options:
+        type: array
+        default: []
+        items:
+          type: string
+        description: Các lựa chọn
+    required:
+    - question
+- name: timeline
+  description: Read recent posts authored by one identified X/Twitter account. Use
+    for what a person posted; do not use for public discussion about a topic or for
+    web news. Ask clarify if no account is identified.
+  parameters:
+    type: object
+    properties:
+      screenname:
+        type: string
+        default: ''
+        description: Tên tài khoản
+      limit:
+        type: integer
+        default: 5
+        description: Số lượng
+    required:
+    - screenname
+- name: social_search
+  description: Search public X/Twitter posts about a topic, keyword or hashtag. Use
+    for what people are discussing on social media. Do not use for one account timeline
+    or ordinary web news. A follow-up changing only the topic keeps the previous source
+    and time scope.
+  parameters:
+    type: object
+    properties:
+      query:
+        type: string
+        default: ''
+        description: Từ khóa
+      search_type:
+        type: string
+        enum:
+        - Latest
+        - Top
+        default: Latest
+        description: Cách sắp xếp
+      limit:
+        type: integer
+        default: 5
+        description: Số lượng
+    required:
+    - query
+- name: lookup
+  description: Search web sources about a topic, including news. Use for web news
+    or information discovery without a specific URL. Do not use for Twitter discussion
+    or for reading a supplied URL. A follow-up changing only the topic keeps the previous
+    web source and time scope.
+  parameters:
+    type: object
+    properties:
+      query:
+        type: string
+        default: ''
+        description: Truy vấn
+      topic:
+        type: string
+        enum:
+        - general
+        - news
+        default: general
+        description: Phân loại
+      timeframe:
+        type: string
+        enum:
+        - day
+        - week
+        - month
+        - year
+        default: week
+        description: Khoảng thời gian
+      max_results:
+        type: integer
+        default: 5
+        description: Số kết quả
+    required:
+    - query
+- name: fetch
+  description: Read the content of a specific supplied HTTP(S) URL. Use for summarizing
+    an identified web article. Do not use to search, guess URLs or retrieve arXiv
+    PDF text; clarify if the URL is missing.
+  parameters:
+    type: object
+    properties:
+      url:
+        type: string
+        default: ''
+        description: Địa chỉ
+    required:
+    - url
+- name: format
+  description: Format items already provided in the conversation or obtained from
+    tools into a digest. Do not use for searching, reading new sources or sending
+    a message. Never invent input items.
+  parameters:
+    type: object
+    properties:
+      items:
+        type: array
+        default: []
+        description: Danh sách item
+        items:
+          type: object
+          properties:
+            title:
+              type: string
+            url:
+              type: string
+            source:
+              type: string
+            summary:
+              type: string
+            section:
+              type: string
+      template:
+        type: string
+        enum:
+        - brief
+        - sections
+        - bullets
+        - thread
+        - daily_ai_vn
+        default: sections
+        description: Khuôn
+      headline:
+        type: string
+        default: ''
+        description: Tiêu đề
+    required:
+    - items
+    - template
+- name: send
+  description: 'Publish the exact approved text to Telegram, only after explicit approval
+    of that content in the conversation. A first request to send is not approval:
+    use clarify first. Do not use for ordinary replies, research, drafts or missing
+    content. Set confirmed=true only with actual approval.'
+  parameters:
+    type: object
+    properties:
+      text:
+        type: string
+        default: ''
+        description: Nội dung
+      confirmed:
+        type: boolean
+        default: false
+        description: Cờ xác nhận
+    required:
+    - text
+- name: policy
+  description: Search the internal company research policy knowledge base. Use for
+    internal rules on citation, privacy, publishing and tool use. Do not use for public
+    web facts or arXiv papers.
+  parameters:
+    type: object
+    properties:
+      query:
+        type: string
+        default: ''
+        description: Truy vấn
+      policy_area:
+        type: string
+        enum:
+        - all
+        - ai_research
+        - source_citation
+        - data_privacy
+        - external_publishing
+        - tool_usage
+        default: all
+        description: Nhóm
+      top_k:
+        type: integer
+        default: 3
+        description: Số mục
+    required:
+    - query
+- name: papers
+  description: Find scientific papers and metadata on arXiv by topic. Do not use for
+    ordinary news, internal policy, or full text of an already identified paper.
+  parameters:
+    type: object
+    properties:
+      query:
+        type: string
+        default: ''
+        description: Từ khóa
+      max_results:
+        type: integer
+        default: 5
+        description: Số lượng
+      sort_by:
+        type: string
+        enum:
+        - relevance
+        - lastUpdatedDate
+        - submittedDate
+        default: relevance
+        description: Sắp xếp
+    required:
+    - query
+- name: paper_text
+  description: Retrieve PDF text of an identified arXiv paper. Use when the arXiv
+    ID or URL is available. Do not use for discovering papers or reading arbitrary
+    web pages; clarify if the paper is unidentified.
+  parameters:
+    type: object
+    properties:
+      arxiv_url:
+        type: string
+        default: ''
+        description: ID hoặc địa chỉ
+      max_pages:
+        type: integer
+        default: 5
+        description: Số trang
+      max_chars:
+        type: integer
+        default: 8000
+        description: Số ký tự
+    required:
+    - arxiv_url

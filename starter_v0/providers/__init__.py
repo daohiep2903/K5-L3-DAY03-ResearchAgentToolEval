@@ -3,9 +3,12 @@ from providers.openrouter_provider import OpenRouterProvider
 from providers.anthropic_provider import AnthropicProvider
 from providers.gemini_provider import GeminiProvider
 from providers.ollama_provider import OllamaProvider
+from providers.xai_provider import XAIProvider
 
 
 def make_provider(name: str):
+    if name == "xai":
+        return XAIProvider()
     if name == "openai":
         return OpenAIProvider()
     if name == "openrouter":

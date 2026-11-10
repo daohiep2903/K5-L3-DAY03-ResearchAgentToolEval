@@ -1,0 +1,10 @@
+{
+  "checked_at": "2026-11-10T11:39:51.886915+00:00",
+  "provider": "openai",
+  "model": "gpt-4o-mini",
+  "check": "scripts/preflight_provider.py --provider openai",
+  "http_status": 429,
+  "error": "You have no credits remaining. Add credits to continue using the API.",
+  "structured_tool_calling_verified": false,
+  "baseline_executed": false
+}

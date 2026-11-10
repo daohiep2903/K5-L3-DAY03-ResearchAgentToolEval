@@ -1,0 +1,9 @@
+{
+  "checked_at": "2026-11-10T11:32:58.284001+00:00",
+  "provider": "xai",
+  "endpoint": "https://api.x.ai/v1/models",
+  "http_status": 403,
+  "baseline_executed": false,
+  "error_code": "permission-denied",
+  "message": "Your team [TEAM_ID] has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit."
+}

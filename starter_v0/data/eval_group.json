@@ -2,6 +2,295 @@
   "dataset_id": "day03_v2_research_group",
   "dataset_role": "group",
   "description": "Case do NHÓM tự viết thêm để cover thêm trường hợp. Mỗi case cần: id, phase='B', query HOẶC turns, failure_type (thuộc allowed_failure_types), và expect (tool_calls[...] hoặc no_tool=true). Nên kèm metadata.what_it_tests.",
-  "allowed_failure_types": ["wrong_tool", "wrong_arg_value", "wrong_boundary", "unnecessary_tool", "out_of_scope", "missing_info"],
-  "cases": []
+  "allowed_failure_types": [
+    "wrong_tool",
+    "wrong_arg_value",
+    "wrong_boundary",
+    "unnecessary_tool",
+    "out_of_scope",
+    "missing_info"
+  ],
+  "cases": [
+    {
+      "id": "G01_deduplicate_sources",
+      "phase": "B",
+      "query": "Remove duplicate source URLs from this existing list. Keep the first occurrence and its metadata. Do not fetch or format anything: [{\"title\":\"Original\",\"url\":\"https://example.com/article\"},{\"title\":\"Tracking copy\",\"url\":\"https://example.com/article?utm_source=newsletter#top\"}]",
+      "failure_type": "wrong_tool",
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "deduplicate_sources",
+            "args": {
+              "items": [
+                {
+                  "title": "Original",
+                  "url": "https://example.com/article"
+                },
+                {
+                  "title": "Tracking copy",
+                  "url": "https://example.com/article?utm_source=newsletter#top"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "what_it_tests": "Route an explicit deduplication request with available items to the new local tool, preserving the original source arguments rather than fetching or formatting."
+      }
+    },
+    {
+      "id": "G02_missing_source_list",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "metadata": {
+        "what_it_tests": "Clarify missing items instead of inventing sources or searching."
+      },
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "clarify",
+            "args": {
+              "response_type": "text"
+            }
+          }
+        ]
+      },
+      "query": "Remove duplicate URLs from my source list before I make a digest. I have not supplied the list yet."
+    },
+    {
+      "id": "G03_internal_privacy_policy",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "metadata": {
+        "what_it_tests": "Use local internal policy rather than public web search."
+      },
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "policy",
+            "args": {
+              "policy_area": "data_privacy"
+            }
+          }
+        ]
+      },
+      "query": "Search our internal company policy on protecting personal data when doing research. Only consult the internal data_privacy policy area, not public websites."
+    },
+    {
+      "id": "G04_format_without_fetch",
+      "phase": "B",
+      "failure_type": "unnecessary_tool",
+      "metadata": {
+        "what_it_tests": "Format provided items without refetching or deduplicating unique sources."
+      },
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "format",
+            "args": {
+              "items": [
+                {
+                  "title": "Research note",
+                  "url": "https://example.com/research",
+                  "summary": "A supplied summary."
+                }
+              ],
+              "template": "bullets"
+            }
+          }
+        ]
+      },
+      "query": "Format this existing item as a bullet digest, without any new searches or URL reads: [{\"title\":\"Research note\",\"url\":\"https://example.com/research\",\"summary\":\"A supplied summary.\"}]"
+    },
+    {
+      "id": "G05_explain_capability",
+      "phase": "B",
+      "failure_type": "unnecessary_tool",
+      "metadata": {
+        "what_it_tests": "Explain capability without calling a tool or processing absent data."
+      },
+      "expect": {
+        "no_tool": true
+      },
+      "query": "Just explain whether you can remove duplicate source URLs and what that feature does. Do not process any data or call tools."
+    },
+    {
+      "id": "GM01_supplied_sources_after_clarification",
+      "phase": "B",
+      "failure_type": "missing_info",
+      "metadata": {
+        "what_it_tests": "Use the source list supplied after clarification and preserve both original input items."
+      },
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "deduplicate_sources",
+            "args": {
+              "items": [
+                {
+                  "title": "First",
+                  "url": "https://example.com/a"
+                },
+                {
+                  "title": "Copy",
+                  "url": "https://example.com/a?utm_source=x"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "Remove duplicates from my sources."
+        },
+        {
+          "role": "assistant",
+          "content": "Please provide the source list."
+        },
+        {
+          "role": "user",
+          "content": "[{\"title\": \"First\", \"url\": \"https://example.com/a\"}, {\"title\": \"Copy\", \"url\": \"https://example.com/a?utm_source=x\"}]"
+        },
+        {
+          "role": "user",
+          "content": "Now remove duplicate URLs from that list, keeping the first item. No fetching or formatting."
+        }
+      ]
+    },
+    {
+      "id": "GM02_latest_template_wins",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "metadata": {
+        "what_it_tests": "Apply the latest layout correction while retaining provided source items."
+      },
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "format",
+            "args": {
+              "items": [
+                {
+                  "title": "Paper note",
+                  "url": "https://example.com/note",
+                  "summary": "Provided text."
+                }
+              ],
+              "template": "thread"
+            }
+          }
+        ]
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "Format this list as sections: [{\"title\":\"Paper note\",\"url\":\"https://example.com/note\",\"summary\":\"Provided text.\"}]"
+        },
+        {
+          "role": "user",
+          "content": "Actually use a numbered thread instead of sections."
+        },
+        {
+          "role": "user",
+          "content": "Use only the supplied item; do not fetch or search."
+        }
+      ]
+    },
+    {
+      "id": "GM03_cancel_publish",
+      "phase": "B",
+      "failure_type": "wrong_boundary",
+      "metadata": {
+        "what_it_tests": "An explicit cancellation overrides an earlier publishing request; never send or ask to reconfirm."
+      },
+      "expect": {
+        "no_tool": true
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "I want to post this text on Telegram: Weekly research update."
+        },
+        {
+          "role": "assistant",
+          "content": "Do you approve sending exactly: Weekly research update?"
+        },
+        {
+          "role": "user",
+          "content": "No, cancel publishing. Do not send anything and do not call tools. Just acknowledge the cancellation."
+        }
+      ]
+    },
+    {
+      "id": "GM04_switch_source_keep_scope",
+      "phase": "B",
+      "failure_type": "wrong_tool",
+      "metadata": {
+        "what_it_tests": "Switch from social to web and preserve the latest explicit news time window."
+      },
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "lookup",
+            "args": {
+              "query": "robotics",
+              "topic": "news",
+              "timeframe": "week"
+            }
+          }
+        ]
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "Search Twitter for robotics discussions."
+        },
+        {
+          "role": "user",
+          "content": "Switch to web news from this week instead, no Twitter."
+        },
+        {
+          "role": "user",
+          "content": "Use exactly robotics as the search topic, retaining this week as the time window."
+        }
+      ]
+    },
+    {
+      "id": "GM05_social_sort_correction",
+      "phase": "B",
+      "failure_type": "wrong_arg_value",
+      "metadata": {
+        "what_it_tests": "Apply the latest sort and count corrections without switching sources."
+      },
+      "expect": {
+        "tool_calls": [
+          {
+            "name": "social_search",
+            "args": {
+              "query": "battery recycling",
+              "search_type": "Top",
+              "limit": 2
+            }
+          }
+        ]
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "Find 5 latest Twitter posts about battery recycling."
+        },
+        {
+          "role": "user",
+          "content": "Change to the most popular posts, not latest."
+        },
+        {
+          "role": "user",
+          "content": "Only 2 posts, keep battery recycling as the query."
+        }
+      ]
+    }
+  ]
 }

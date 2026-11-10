@@ -110,13 +110,49 @@ def test_policy_instruction_like_lines_go_to_untrusted_text() -> None:
 #   2. bad / missing input from the model (empty string, wrong type, out-of-enum value)
 #   3. failure path (missing key, HTTP error, timeout) -> returns error dict, does not raise
 
-def test_my_new_tool_happy_path() -> None:
-    pytest.skip(TODO)
+def test_deduplicate_sources_preserves_first_item_and_input() -> None:
+    import copy
+
+    items = [
+        {"url": "https://EXAMPLE.com:443/a?id=1&utm_source=x#top", "title": "first", "summary": "keep"},
+        {"url": "https://example.com/a?id=1&fbclid=x", "title": "duplicate"},
+        {"url": "https://example.com/a?id=2", "title": "different"},
+    ]
+    original = copy.deepcopy(items)
+    result = TOOL_FUNCTIONS["deduplicate_sources"](items=items)
+    assert result["items"] == [original[0], original[2]]
+    assert result["input_count"] == 3
+    assert result["item_count"] == 2
+    assert result["duplicate_count"] == 1
+    assert result["duplicates"] == [{"index": 1, "kept_index": 0}]
+    assert items == original
 
 
-def test_my_new_tool_bad_input_from_model() -> None:
-    pytest.skip(TODO)
+@pytest.mark.parametrize("items", [None, "not a list", {}, [None], [{}], [{"url": 12}], [{"url": " "}]])
+def test_deduplicate_sources_rejects_bad_input_from_model(items) -> None:
+    result = TOOL_FUNCTIONS["deduplicate_sources"](items=items)
+    assert result["error"] == "ValueError"
+    assert result["message"]
+    assert "items" not in result
 
 
-def test_my_new_tool_failure_returns_error_dict() -> None:
-    pytest.skip(TODO)
+@pytest.mark.parametrize("url", ["relative/path", "ftp://example.com/a", "https://example.com:bad/a", "https://[broken", "https://user:secret@example.com/a"])
+def test_deduplicate_sources_url_failure_returns_error_without_partial_results(url) -> None:
+    result = TOOL_FUNCTIONS["deduplicate_sources"](items=[{"url": "https://example.com/good"}, {"url": url}])
+    assert result["tool"] == "deduplicate_sources"
+    assert result["error"] == "ValueError"
+    assert "items" not in result
+    assert "secret" not in result["message"]
+
+
+def test_deduplicate_sources_empty_list_is_valid() -> None:
+    result = TOOL_FUNCTIONS["deduplicate_sources"](items=[])
+    assert result["items"] == []
+    assert result["duplicate_count"] == result["item_count"] == result["input_count"] == 0
+
+
+def test_deduplicate_sources_keeps_distinct_content_urls() -> None:
+    urls = ["http://example.com/a", "https://example.com/a", "https://example.com/A", "https://example.com/a/", "https://example.com:8443/a", "https://example.com/a?id=1", "https://example.com/a?id=2"]
+    result = TOOL_FUNCTIONS["deduplicate_sources"](items=[{"url": url} for url in urls])
+    assert [item["url"] for item in result["items"]] == urls
+    assert result["duplicate_count"] == 0

@@ -11,6 +11,7 @@ __pycache__/
 !.env.example
 
 # Local-only files (not part of the lab)
+.local/
 INTERNAL-DEMO-SCRIPT.md
 starter/
 

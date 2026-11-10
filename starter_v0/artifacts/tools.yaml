@@ -1,125 +1,296 @@
-# starter_v0 — tool declarations (intentionally vague).
-# Names and descriptions here are a rough first draft. Routing rules, name->handle
-# mapping, arg conventions (news/timeframe/Top), and the send-confirmation boundary
-# are NOT spelled out anywhere yet. Your job is to make these declarations + the
-# system prompt good enough that the agent routes correctly on the eval.
-#
-# If you rename a tool, keep the name in sync across:
-#   this file  ->  tools/__init__.py (TOOL_FUNCTIONS)  ->  data/eval_base.json + data/eval_research_extension.json
-# `pytest tests/test_tool_contract.py` checks this sync for you.
-#
-# TODO CP2 (student):
-#   - Rewrite every description: what it does, WHEN to use it, WHEN NOT to use it.
-#   - Spell out arg conventions in parameter descriptions (handle format, topic/timeframe, search_type).
-#   - Make the `send` confirmation boundary explicit.
-#   - Declare your new tool(s) at the end of this file.
+# CP2 v3: routing and explicit argument conventions.
 tools:
-  # ---------------- Core tools ----------------
-  - name: clarify
-    description: "Gửi một câu hỏi cho người dùng."
-    parameters:
-      type: object
-      properties:
-        question: {type: string, default: "", description: "Câu hỏi"}
-        response_type: {type: string, enum: [text, yes_no, choice], default: "text", description: "Kiểu trả lời"}
-        options: {type: array, default: [], items: {type: string}, description: "Các lựa chọn"}
-      required: [question]
-
-  - name: timeline
-    description: "Lấy các bài đăng gần đây."
-    parameters:
-      type: object
-      properties:
-        screenname: {type: string, default: "", description: "Tên tài khoản"}
-        limit: {type: integer, default: 5, description: "Số lượng"}
-      required: [screenname]
-
-  - name: social_search
-    description: "Tìm trên mạng xã hội."
-    parameters:
-      type: object
-      properties:
-        query: {type: string, default: "", description: "Từ khóa"}
-        search_type: {type: string, enum: [Latest, Top], default: "Latest", description: "Cách sắp xếp"}
-        limit: {type: integer, default: 5, description: "Số lượng"}
-      required: [query]
-
-  - name: lookup
-    description: "Tra cứu thông tin trên internet."
-    parameters:
-      type: object
-      properties:
-        query: {type: string, default: "", description: "Truy vấn"}
-        topic: {type: string, enum: [general, news], default: "general", description: "Phân loại"}
-        timeframe: {type: string, enum: [day, week, month, year], default: "week", description: "Khoảng thời gian"}
-        max_results: {type: integer, default: 5, description: "Số kết quả"}
-      required: [query]
-
-  - name: fetch
-    description: "Lấy nội dung từ một địa chỉ."
-    parameters:
-      type: object
-      properties:
-        url: {type: string, default: "", description: "Địa chỉ"}
-      required: [url]
-
-  - name: format
-    description: "Trình bày dữ liệu đã có thành văn bản."
-    parameters:
-      type: object
-      properties:
+- name: deduplicate_sources
+  description: Remove duplicate source URLs from an existing item list before making a digest. Use only for deduplication of supplied or retrieved sources. Do not use for searching, reading, fact checking, or formatting. Ask clarify if no source list is available. Keeps the first item; comparison ignores common tracking parameters and fragments, without fetching URLs.
+  parameters:
+    type: object
+    properties:
+      items:
+        type: array
+        description: Existing source objects with absolute HTTP(S) URLs. Preserve the original metadata; never invent items. Empty array is valid. URL comparison keeps nontracking query parameters.
         items:
-          type: array
-          default: []
-          description: "Danh sách item"
-          items:
-            type: object
-            properties:
-              title: {type: string}
-              url: {type: string}
-              source: {type: string}
-              summary: {type: string}
-              section: {type: string}
-        template: {type: string, enum: [brief, sections, bullets, thread, daily_ai_vn], default: "sections", description: "Khuôn"}
-        headline: {type: string, default: "", description: "Tiêu đề"}
-      required: [items, template]
-
-  # ---------------- Bonus tools ----------------
-  - name: send
-    description: "Gửi một đoạn văn bản đi."
-    parameters:
-      type: object
-      properties:
-        text: {type: string, default: "", description: "Nội dung"}
-        confirmed: {type: boolean, default: false, description: "Cờ xác nhận"}
-      required: [text]
-
-  - name: policy
-    description: "Tìm trong tài liệu nội bộ."
-    parameters:
-      type: object
-      properties:
-        query: {type: string, default: "", description: "Truy vấn"}
-        policy_area: {type: string, enum: [all, ai_research, source_citation, data_privacy, external_publishing, tool_usage], default: "all", description: "Nhóm"}
-        top_k: {type: integer, default: 3, description: "Số mục"}
-      required: [query]
-
-  - name: papers
-    description: "Tìm bài báo khoa học."
-    parameters:
-      type: object
-      properties:
-        query: {type: string, default: "", description: "Từ khóa"}
-        max_results: {type: integer, default: 5, description: "Số lượng"}
-        sort_by: {type: string, enum: [relevance, lastUpdatedDate, submittedDate], default: "relevance", description: "Sắp xếp"}
-      required: [query]
-
-  - name: paper_text
-    description: "Lấy nội dung text của một bài báo."
-    parameters:
-      type: object
-      properties:
-        arxiv_url: {type: string, default: "", description: "ID hoặc địa chỉ"}
-        max_pages: {type: integer, default: 5, description: "Số trang"}
-        max_chars: {type: integer, default: 8000, description: "Số ký tự"}
-      required: [arxiv_url]
+          type: object
+          properties:
+            url: {type: string, description: Absolute HTTP(S) source URL.}
+            title: {type: string}
+            summary: {type: string}
+            source: {type: string}
+            section: {type: string}
+          required: [url]
+    required: [items]
+- name: clarify
+  description: Ask the user and wait when a required handle, URL, topic or content
+    is missing, or approval is needed. For a publishing request ask for approval before
+    send, using a yes/no question that also requests missing content when necessary.
+    Do not use if the conversation already supplies the information.
+  parameters:
+    type: object
+    properties:
+      question:
+        type: string
+        default: ''
+        description: One focused question. For a publishing request ask whether the
+          user approves sending the specific content; if content is absent, also request
+          it without pretending approval exists.
+      response_type:
+        type: string
+        enum:
+        - text
+        - yes_no
+        - choice
+        default: text
+        description: 'Always explicitly include this field: yes_no for publishing
+          approval, text for missing handle/URL/topic, choice only when presenting
+          concrete options. A publishing approval question uses yes_no even if it
+          also asks for the content.'
+      options:
+        type: array
+        default: []
+        items:
+          type: string
+        description: Concrete answer choices only for response_type=choice; otherwise
+          omit or use [].
+    required:
+    - question
+- name: timeline
+  description: Read recent posts authored by one identified X/Twitter account. Use
+    for what a person posted; do not use for public discussion about a topic or for
+    web news. Ask clarify if no account is identified.
+  parameters:
+    type: object
+    properties:
+      screenname:
+        type: string
+        default: ''
+        description: 'X/Twitter handle without leading @ or URL. Use an explicitly
+          supplied handle; known unambiguous names may map to their known handle (Sam
+          Altman: sama). Never guess an unidentified account.'
+      limit:
+        type: integer
+        default: 5
+        description: Number of posts requested; preserve explicit counts and latest
+          user corrections; default 5 if unspecified.
+    required:
+    - screenname
+- name: social_search
+  description: Search public X/Twitter posts about a topic, keyword or hashtag. Use
+    for what people are discussing on social media. Do not use for one account timeline
+    or ordinary web news. A follow-up changing only the topic keeps the previous source
+    and time scope.
+  parameters:
+    type: object
+    properties:
+      query:
+        type: string
+        default: ''
+        description: Topic/keywords supplied by the user; do not add unsupported constraints.
+      search_type:
+        type: string
+        enum:
+        - Latest
+        - Top
+        default: Latest
+        description: Explicitly use Top for top/popular/most discussed posts and Latest
+          for recent/latest posts. Preserve the prior value unless changed.
+      limit:
+        type: integer
+        default: 5
+        description: Requested number of posts; latest explicit correction wins; default
+          5.
+    required:
+    - query
+- name: lookup
+  description: Search web sources about a topic, including news. Use for web news
+    or information discovery without a specific URL. Do not use for Twitter discussion
+    or for reading a supplied URL. A follow-up changing only the topic keeps the previous
+    web source and time scope.
+  parameters:
+    type: object
+    properties:
+      query:
+        type: string
+        default: ''
+        description: 'Search topic only, preserving the requested wording. Do not
+          append generic news/today/timeframe words: use topic/timeframe for those
+          constraints. A topic-only follow-up replaces query and preserves topic/timeframe.'
+      topic:
+        type: string
+        enum:
+        - general
+        - news
+        default: general
+        description: Explicitly include news for news/current-events requests, including
+          follow-ups that change only the subject; use general for other information.
+          Do not rely on the schema default to represent news.
+      timeframe:
+        type: string
+        enum:
+        - day
+        - week
+        - month
+        - year
+        default: week
+        description: Explicitly use day=today/last 24h, week=this week/7 days, month=this
+          month, year=this year. Keep the previous timeframe for topic-only follow-ups
+          unless the user changes it.
+      max_results:
+        type: integer
+        default: 5
+        description: Requested count of web results; default 5.
+    required:
+    - query
+- name: fetch
+  description: Read the content of a specific supplied HTTP(S) URL. Use for summarizing
+    an identified web article. Do not use to search, guess URLs or retrieve arXiv
+    PDF text; clarify if the URL is missing.
+  parameters:
+    type: object
+    properties:
+      url:
+        type: string
+        default: ''
+        description: Exact HTTP(S) URL supplied in the conversation, preserving path
+          and query. Never fabricate a URL.
+    required:
+    - url
+- name: format
+  description: Format items already provided in the conversation or obtained from
+    tools into a digest. Do not use for searching, reading new sources or sending
+    a message. Never invent input items.
+  parameters:
+    type: object
+    properties:
+      items:
+        type: array
+        default: []
+        description: Only supplied/retrieved items; preserve their titles, URLs, sources,
+          summaries and sections.
+        items:
+          type: object
+          properties:
+            title:
+              type: string
+            url:
+              type: string
+            source:
+              type: string
+            summary:
+              type: string
+            section:
+              type: string
+      template:
+        type: string
+        enum:
+        - brief
+        - sections
+        - bullets
+        - thread
+        - daily_ai_vn
+        default: sections
+        description: 'Choose the requested layout: brief=short digest, sections=grouped
+          sections, bullets=bullet list, thread=thread, daily_ai_vn=Vietnamese daily
+          AI digest.'
+      headline:
+        type: string
+        default: ''
+        description: User supplied title or a concise title grounded in the actual
+          items.
+    required:
+    - items
+    - template
+- name: send
+  description: 'Publish the exact approved text to Telegram, only after explicit approval
+    of that content in the conversation. A first request to send is not approval:
+    use clarify first. Do not use for ordinary replies, research, drafts or missing
+    content. Set confirmed=true only with actual approval.'
+  parameters:
+    type: object
+    properties:
+      text:
+        type: string
+        default: ''
+        description: Exact content explicitly approved in the conversation. Do not
+          replace a reference with invented content or a claim that it was sent.
+      confirmed:
+        type: boolean
+        default: false
+        description: Explicit true only after user approval of this exact content;
+          otherwise use clarify rather than invoking send.
+    required:
+    - text
+- name: policy
+  description: Search the internal company research policy knowledge base. Use for
+    internal rules on citation, privacy, publishing and tool use. Do not use for public
+    web facts or arXiv papers.
+  parameters:
+    type: object
+    properties:
+      query:
+        type: string
+        default: ''
+        description: Question or keywords about internal policy.
+      policy_area:
+        type: string
+        enum:
+        - all
+        - ai_research
+        - source_citation
+        - data_privacy
+        - external_publishing
+        - tool_usage
+        default: all
+        description: Use the specific relevant policy area, or all if unspecified
+          or spanning multiple areas.
+      top_k:
+        type: integer
+        default: 3
+        description: Maximum number of matching policy sections; default 3.
+    required:
+    - query
+- name: papers
+  description: Find scientific papers and metadata on arXiv by topic. Do not use for
+    ordinary news, internal policy, or full text of an already identified paper.
+  parameters:
+    type: object
+    properties:
+      query:
+        type: string
+        default: ''
+        description: Scientific topic or paper search terms.
+      max_results:
+        type: integer
+        default: 5
+        description: Requested paper count; default 5.
+      sort_by:
+        type: string
+        enum:
+        - relevance
+        - lastUpdatedDate
+        - submittedDate
+        default: relevance
+        description: relevance for topic matching; submittedDate for newly submitted
+          papers; lastUpdatedDate for recently updated papers.
+    required:
+    - query
+- name: paper_text
+  description: Retrieve PDF text of an identified arXiv paper. Use when the arXiv
+    ID or URL is available. Do not use for discovering papers or reading arbitrary
+    web pages; clarify if the paper is unidentified.
+  parameters:
+    type: object
+    properties:
+      arxiv_url:
+        type: string
+        default: ''
+        description: Supplied arXiv identifier, abstract URL or PDF URL; do not invent
+          an identifier.
+      max_pages:
+        type: integer
+        default: 5
+        description: Maximum pages to extract; default 5.
+      max_chars:
+        type: integer
+        default: 8000
+        description: Maximum extracted text characters; default 8000.
+    required:
+    - arxiv_url

@@ -1,5 +1,19 @@
 # Source code
 
+## CP5 — Research Desk UI
+
+Từ thư mục này, cài `requirements.txt`, cấu hình `OPENROUTER_API_KEY` và
+`DEMO_ACCESS_CODE` trong `.env`, rồi chạy:
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501 --server.headless true --browser.gatherUsageStats false
+```
+
+Mở http://127.0.0.1:8501. Trên máy demo hiện tại, mã đã tạo riêng ở
+`.local/demo_access_code.txt` tại root repo. UI có ngân sách 30 lượt/tiến trình
+và tắt gửi Telegram. Xem [CP5_REPORT.md](analysis/CP5_REPORT.md) để biết bằng
+chứng CLI/UI, giới hạn kiểm thử và trạng thái link dùng thử bên ngoài.
+
 Toàn bộ source code của lab nằm trong folder này. Chạy mọi lệnh từ `starter_v0/`.
 
 - File bắt đầu chạy: `run_eval.py` (chạy eval), `chat.py` (chat live), `scripts/preflight_provider.py` (kiểm tra provider).

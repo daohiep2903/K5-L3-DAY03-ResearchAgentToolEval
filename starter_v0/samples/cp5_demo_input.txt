@@ -1,0 +1,6 @@
+Remove duplicate URLs from these supplied sources and report the result, without searching: [{"title":"First source","url":"https://example.com/a"},{"title":"Tracking copy","url":"https://example.com/a?utm_source=demo"}]
+Format my source list as a bullet digest. I have not supplied the list for this request yet. Ask me for it; do not reuse the previous list.
+Here is the list: [{"title":"Research demo","url":"https://example.com/demo","summary":"This is supplied demonstration content."}]. Now format exactly this item as bullets, without searching.
+Post exactly this text to Telegram: Research demo completed. Ask for confirmation before sending.
+No, cancel the Telegram post. Do not send anything; just acknowledge cancellation.
+/exit
